@@ -9,6 +9,7 @@ src/*jpg
 notebooks/.ipynb_checkpoints/*
 exps/
 src/yaml_generator.py
+datasets
 *.tar.gz
 *ipynb
 *.zip

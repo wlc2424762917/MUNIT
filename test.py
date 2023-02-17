@@ -13,11 +13,13 @@ import torch
 import os
 from torchvision import transforms
 from PIL import Image
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, help="net configuration")
 parser.add_argument('--input', type=str, help="input image path")
 parser.add_argument('--output_folder', type=str, help="output image path")
+parser.add_argument('--output_folder_npy', type=str, help="output image path")
 parser.add_argument('--checkpoint', type=str, help="checkpoint of autoencoders")
 parser.add_argument('--style', type=str, default='', help="style image path")
 parser.add_argument('--a2b', type=int, default=1, help="1 for a2b and 0 for b2a")
@@ -28,7 +30,6 @@ parser.add_argument('--output_only', action='store_true', help="whether use sync
 parser.add_argument('--output_path', type=str, default='.', help="path for logs, checkpoints, and VGG model weight")
 parser.add_argument('--trainer', type=str, default='MUNIT', help="MUNIT|UNIT")
 opts = parser.parse_args()
-
 
 
 torch.manual_seed(opts.seed)
@@ -76,7 +77,7 @@ else:
 with torch.no_grad():
     transform = transforms.Compose([transforms.Resize(new_size),
                                     transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                    transforms.Normalize((0.5), (0.5))])
     image = Variable(transform(Image.open(opts.input).convert('RGB')).unsqueeze(0).cuda())
     style_image = Variable(transform(Image.open(opts.style).convert('RGB')).unsqueeze(0).cuda()) if opts.style != '' else None
 
@@ -94,11 +95,15 @@ with torch.no_grad():
             outputs = decode(content, s)
             outputs = (outputs + 1) / 2.
             path = os.path.join(opts.output_folder, 'output{:03d}.jpg'.format(j))
+            path_npy = os.path.join(opts.output_folder_npy, 'output{:03d}.npy'.format(j))
+            np.save(path_npy, outputs.data)
             vutils.save_image(outputs.data, path, padding=0, normalize=True)
     elif opts.trainer == 'UNIT':
         outputs = decode(content)
         outputs = (outputs + 1) / 2.
         path = os.path.join(opts.output_folder, 'output.jpg')
+        path_npy = os.path.join(opts.output_folder, 'output.npy')
+        np.save()
         vutils.save_image(outputs.data, path, padding=0, normalize=True)
     else:
         pass

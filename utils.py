@@ -2,7 +2,6 @@
 Copyright (C) 2018 NVIDIA Corporation.  All rights reserved.
 Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 """
-from torch.utils.serialization import load_lua
 from torch.utils.data import DataLoader
 from networks import Vgg16
 from torch.autograd import Variable
@@ -73,8 +72,10 @@ def get_all_data_loaders(conf):
 def get_data_loader_list(root, file_list, batch_size, train, new_size=None,
                            height=256, width=256, num_workers=4, crop=True):
     transform_list = [transforms.ToTensor(),
-                      transforms.Normalize((0.5, 0.5, 0.5),
-                                           (0.5, 0.5, 0.5))]
+                      # transforms.Normalize((0.5, 0.5, 0.5),
+                      #                      (0.5, 0.5, 0.5))]
+                      transforms.Normalize((0.5),
+                                            (0.5))]
     transform_list = [transforms.RandomCrop((height, width))] + transform_list if crop else transform_list
     transform_list = [transforms.Resize(new_size)] + transform_list if new_size is not None else transform_list
     transform_list = [transforms.RandomHorizontalFlip()] + transform_list if train else transform_list
@@ -83,11 +84,12 @@ def get_data_loader_list(root, file_list, batch_size, train, new_size=None,
     loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=train, drop_last=True, num_workers=num_workers)
     return loader
 
+
 def get_data_loader_folder(input_folder, batch_size, train, new_size=None,
                            height=256, width=256, num_workers=4, crop=True):
     transform_list = [transforms.ToTensor(),
-                      transforms.Normalize((0.5, 0.5, 0.5),
-                                           (0.5, 0.5, 0.5))]
+                      transforms.Normalize((0.5),
+                                           (0.5))]
     transform_list = [transforms.RandomCrop((height, width))] + transform_list if crop else transform_list
     transform_list = [transforms.Resize(new_size)] + transform_list if new_size is not None else transform_list
     transform_list = [transforms.RandomHorizontalFlip()] + transform_list if train else transform_list
@@ -99,7 +101,7 @@ def get_data_loader_folder(input_folder, batch_size, train, new_size=None,
 
 def get_config(config):
     with open(config, 'r') as stream:
-        return yaml.load(stream)
+        return yaml.load(stream, Loader=yaml.FullLoader)
 
 
 def eformat(f, prec):
@@ -218,32 +220,32 @@ def get_model_list(dirname, key):
     return last_model_name
 
 
-def load_vgg16(model_dir):
-    """ Use the model from https://github.com/abhiskk/fast-neural-style/blob/master/neural_style/utils.py """
-    if not os.path.exists(model_dir):
-        os.mkdir(model_dir)
-    if not os.path.exists(os.path.join(model_dir, 'vgg16.weight')):
-        if not os.path.exists(os.path.join(model_dir, 'vgg16.t7')):
-            os.system('wget https://www.dropbox.com/s/76l3rt4kyi3s8x7/vgg16.t7?dl=1 -O ' + os.path.join(model_dir, 'vgg16.t7'))
-        vgglua = load_lua(os.path.join(model_dir, 'vgg16.t7'))
-        vgg = Vgg16()
-        for (src, dst) in zip(vgglua.parameters()[0], vgg.parameters()):
-            dst.data[:] = src
-        torch.save(vgg.state_dict(), os.path.join(model_dir, 'vgg16.weight'))
-    vgg = Vgg16()
-    vgg.load_state_dict(torch.load(os.path.join(model_dir, 'vgg16.weight')))
-    return vgg
+# def load_vgg16(model_dir):
+#     """ Use the model from https://github.com/abhiskk/fast-neural-style/blob/master/neural_style/utils.py """
+#     if not os.path.exists(model_dir):
+#         os.mkdir(model_dir)
+#     if not os.path.exists(os.path.join(model_dir, 'vgg16.weight')):
+#         if not os.path.exists(os.path.join(model_dir, 'vgg16.t7')):
+#             os.system('wget https://www.dropbox.com/s/76l3rt4kyi3s8x7/vgg16.t7?dl=1 -O ' + os.path.join(model_dir, 'vgg16.t7'))
+#         vgglua = load_lua(os.path.join(model_dir, 'vgg16.t7'))
+#         vgg = Vgg16()
+#         for (src, dst) in zip(vgglua.parameters()[0], vgg.parameters()):
+#             dst.data[:] = src
+#         torch.save(vgg.state_dict(), os.path.join(model_dir, 'vgg16.weight'))
+#     vgg = Vgg16()
+#     vgg.load_state_dict(torch.load(os.path.join(model_dir, 'vgg16.weight')))
+#     return vgg
 
-def load_inception(model_path):
-    state_dict = torch.load(model_path)
-    model = inception_v3(pretrained=False, transform_input=True)
-    model.aux_logits = False
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, state_dict['fc.weight'].size(0))
-    model.load_state_dict(state_dict)
-    for param in model.parameters():
-        param.requires_grad = False
-    return model
+# def load_inception(model_path):
+#     state_dict = torch.load(model_path)
+#     model = inception_v3(pretrained=False, transform_input=True)
+#     model.aux_logits = False
+#     num_ftrs = model.fc.in_features
+#     model.fc = nn.Linear(num_ftrs, state_dict['fc.weight'].size(0))
+#     model.load_state_dict(state_dict)
+#     for param in model.parameters():
+#         param.requires_grad = False
+#     return model
 
 def vgg_preprocess(batch):
     tensortype = type(batch.data)
