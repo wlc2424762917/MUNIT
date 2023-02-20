@@ -3,7 +3,7 @@ Copyright (C) 2018 NVIDIA Corporation.  All rights reserved.
 Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 """
 from __future__ import print_function
-from utils import get_config, get_data_loader_folder, pytorch03_to_pytorch04, load_inception
+from utils import get_config, get_data_loader_folder, pytorch03_to_pytorch04
 from trainer import MUNIT_Trainer, UNIT_Trainer
 from torch import nn
 from scipy.stats import entropy
@@ -29,7 +29,7 @@ parser.add_argument('--output_folder', type=str, help="output image folder")
 parser.add_argument('--checkpoint', type=str, help="checkpoint of autoencoders")
 parser.add_argument('--a2b', type=int, help="1 for a2b and 0 for b2a", default=1)
 parser.add_argument('--seed', type=int, default=1, help="random seed")
-parser.add_argument('--num_style',type=int, default=10, help="number of styles to sample")
+parser.add_argument('--num_style',type=int, default=5, help="number of styles to sample")
 parser.add_argument('--synchronized', action='store_true', help="whether use synchronized style code or not")
 parser.add_argument('--output_only', action='store_true', help="whether only save the output images or also save the input images")
 parser.add_argument('--output_path', type=str, default='.', help="path for logs, checkpoints, and VGG model weight")
@@ -50,17 +50,17 @@ config = get_config(opts.config)
 input_dim = config['input_dim_a'] if opts.a2b else config['input_dim_b']
 
 # Load the inception networks if we need to compute IS or CIIS
-if opts.compute_IS or opts.compute_IS:
-    inception = load_inception(opts.inception_b) if opts.a2b else load_inception(opts.inception_a)
-    # freeze the inception models and set eval mode
-    inception.eval()
-    for param in inception.parameters():
-        param.requires_grad = False
-    inception_up = nn.Upsample(size=(299, 299), mode='bilinear')
+# if opts.compute_IS or opts.compute_IS:
+#     inception = load_inception(opts.inception_b) if opts.a2b else load_inception(opts.inception_a)
+#     # freeze the inception models and set eval mode
+#     inception.eval()
+#     for param in inception.parameters():
+#         param.requires_grad = False
+#     inception_up = nn.Upsample(size=(299, 299), mode='bilinear')
 
 # Setup model and data loader
 image_names = ImageFolder(opts.input_folder, transform=None, return_paths=True)
-data_loader = get_data_loader_folder(opts.input_folder, 1, False, new_size=config['new_size_a'], crop=False)
+data_loader = get_data_loader_folder(opts.input_folder, 1, False, new_size=config['new_size'], crop=False)
 
 config['vgg_model_path'] = opts.output_path
 if opts.trainer == 'MUNIT':
@@ -71,6 +71,7 @@ elif opts.trainer == 'UNIT':
 else:
     sys.exit("Only support MUNIT|UNIT")
 
+print(opts.checkpoint)
 try:
     state_dict = torch.load(opts.checkpoint)
     trainer.gen_a.load_state_dict(state_dict['a'])
@@ -105,18 +106,22 @@ if opts.trainer == 'MUNIT':
             s = style[j].unsqueeze(0)
             outputs = decode(content, s)
             outputs = (outputs + 1) / 2.
-            if opts.compute_IS or opts.compute_CIS:
-                pred = F.softmax(inception(inception_up(outputs)), dim=1).cpu().data.numpy()  # get the predicted class distribution
-            if opts.compute_IS:
-                all_preds.append(pred)
-            if opts.compute_CIS:
-                cur_preds.append(pred)
+            # if opts.compute_IS or opts.compute_CIS:
+            #     pred = F.softmax(inception(inception_up(outputs)), dim=1).cpu().data.numpy()  # get the predicted class distribution
+            # if opts.compute_IS:
+            #     all_preds.append(pred)
+            # if opts.compute_CIS:
+            #     cur_preds.append(pred)
             # path = os.path.join(opts.output_folder, 'input{:03d}_output{:03d}.jpg'.format(i, j))
             basename = os.path.basename(names[1])
             path = os.path.join(opts.output_folder+"_%02d"%j,basename)
             if not os.path.exists(os.path.dirname(path)):
                 os.makedirs(os.path.dirname(path))
-            vutils.save_image(outputs.data, path, padding=0, normalize=True)
+            print(path)
+            #path_jpg = path[0:-3]+'jpg'
+            #vutils.save_image(outputs.data, path_jpg, padding=0, normalize=True)
+            output_data_npy = outputs.data.detach().float().cpu().numpy()
+            np.save(path, output_data_npy)
         if opts.compute_CIS:
             cur_preds = np.concatenate(cur_preds, 0)
             py = np.sum(cur_preds, axis=0)  # prior is computed from outputs given a specific input

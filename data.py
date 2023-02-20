@@ -150,14 +150,15 @@ class ImageFolder(data.Dataset):
     def __getitem__(self, index):
         path = self.imgs[index]
         img = np.load(path)
+        img = (img - img.min()) / (img.max() - img.min() + 1e-5)
+        # img = img / 255
         # img = np.expand_dims(img, 0)
         # print(img.shape)
         img = Image.fromarray(img)
-
         if self.transform is not None:
             img = self.transform(img)
-
-        # img = img / 255
+        # print(img.min())
+        # print(img.max())
 
         if self.return_paths:
             return img, path
