@@ -157,8 +157,8 @@ class ImageFolder(data.Dataset):
         img = Image.fromarray(img)
         if self.transform is not None:
             img = self.transform(img)
-        # print(img.min())
-        # print(img.max())
+        print(img.min())
+        print(img.max())
 
         if self.return_paths:
             return img, path
