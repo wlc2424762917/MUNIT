@@ -67,6 +67,10 @@ class MUNIT_Trainer(nn.Module):
 
     def gen_update(self, x_a, x_b, hyperparameters):
         self.gen_opt.zero_grad()
+        print("a", x_a.max())
+        print("a", x_a.min())
+        print("b", x_b.max())
+        print("b", x_b.min())
         s_a = Variable(torch.randn(x_a.size(0), self.style_dim, 1, 1).cuda())
         s_b = Variable(torch.randn(x_b.size(0), self.style_dim, 1, 1).cuda())
         # encode
@@ -76,8 +80,12 @@ class MUNIT_Trainer(nn.Module):
         x_a_recon = self.gen_a.decode(c_a, s_a_prime)
         x_b_recon = self.gen_b.decode(c_b, s_b_prime)
         # decode (cross domain)
+
         x_ba = self.gen_a.decode(c_b, s_a)
         x_ab = self.gen_b.decode(c_a, s_b)
+
+        print("ab", x_ab.max())
+        print("ab", x_ab.min())
         # encode again
         c_b_recon, s_a_recon = self.gen_a.encode(x_ba)
         c_a_recon, s_b_recon = self.gen_b.encode(x_ab)
@@ -143,7 +151,7 @@ class MUNIT_Trainer(nn.Module):
         x_ba1, x_ba2 = torch.cat(x_ba1), torch.cat(x_ba2)
         x_ab1, x_ab2 = torch.cat(x_ab1), torch.cat(x_ab2)
         print(x_ab1.max())
-        print(x_ab2.min())
+        print(x_ab1.min())
         self.train()
         return x_a, x_a_recon, x_ab1, x_ab2, x_b, x_b_recon, x_ba1, x_ba2
 
